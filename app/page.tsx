@@ -22,9 +22,9 @@ export default function LandingPage() {
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-6 md:flex-row">
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[hsl(var(--primary))]">
-              <span className="font-display text-sm font-bold text-[hsl(var(--primary-foreground))]">P</span>
+              <span className="font-display text-sm font-bold text-[hsl(var(--primary-foreground))]">A</span>
             </div>
-            <span className="font-display text-lg font-bold text-[hsl(var(--foreground))]">PeerBet</span>
+            <span className="font-display text-lg font-bold text-[hsl(var(--foreground))]">Al tiro</span>
           </div>
           <p className="text-sm text-[hsl(var(--muted-foreground))]">
             Licenciado y regulado en Curazao. Operacion con estandares AML/KYC internacionales.

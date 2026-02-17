@@ -34,6 +34,7 @@ type AuthContextType = {
   ) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   updateBalance: (amount: number) => void;
+  refreshBalance: () => Promise<void>;
   signInWithGoogle: () => Promise<{ success: boolean; error?: string }>;
   googleError: string | null;
 };
@@ -54,7 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setGoogleError(null);
     const result = await AuthService.signInWithGoogle();
     if (result && result.err) {
-      const errMsg = result.err?.message || 'Error al iniciar sesión con Google';
+      const errMsg = (result.err as any)?.message || 'Error al iniciar sesión con Google';
       setGoogleError(errMsg);
       return { success: false, error: errMsg };
     } else if (result && result.user) {
@@ -212,6 +213,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const refreshBalance = useCallback(async () => {
+    if (!user) return;
+    try {
+      const res = await fetch(`/api/wallet?userId=${user.id}`);
+      if (res.ok) {
+        const data = await res.json();
+        setUser((prev) => {
+          if (!prev) return prev;
+          const updated = { ...prev, balance: data.balance };
+          localStorage.setItem('peerbet_user', JSON.stringify(updated));
+          return updated;
+        });
+      }
+    } catch (error) {
+      console.error('Error refreshing balance:', error);
+    }
+  }, [user]);
+
   return (
     <AuthContext.Provider
       value={{
@@ -221,6 +240,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         register,
         logout,
         updateBalance,
+        refreshBalance,
         signInWithGoogle,
         googleError,
       }}

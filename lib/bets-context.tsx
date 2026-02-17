@@ -10,6 +10,7 @@ type BetsContextType = {
     bet: Omit<Bet, "id" | "date" | "status">
   ) => Promise<{ success: boolean; error?: string }>
   simulateResults: () => void
+  fetchBets: () => Promise<void>
 }
 
 const BetsContext = createContext<BetsContextType | null>(null)
@@ -28,37 +29,32 @@ const opponents = [
 ]
 
 export function BetsProvider({ children }: { children: ReactNode }) {
-  const { user, updateBalance } = useAuth()
+  const { user, updateBalance, refreshBalance } = useAuth()
   const [bets, setBets] = useState<Bet[]>([])
 
-  // Load bets from localStorage
-  useEffect(() => {
-    if (user) {
-      const stored = localStorage.getItem(`peerbet_bets_${user.id}`)
-      if (stored) {
-        try {
-          setBets(JSON.parse(stored))
-        } catch {
-          setBets([])
-        }
+  // Load bets from API
+  const fetchBets = useCallback(async () => {
+    if (!user) return
+    try {
+      const res = await fetch(`/api/bets?userId=${user.id}&t=${Date.now()}`, { cache: 'no-store' })
+      if (res.ok) {
+        const data = await res.json()
+        console.log("BetsProvider fetched:", data);
+        setBets(data.bets || [])
       } else {
-        setBets([])
+        console.error("BetsProvider fetch failed:", res.status);
       }
-    } else {
-      setBets([])
+    } catch (error) {
+      console.error("Error loading bets:", error)
     }
   }, [user])
 
-  // Save bets to localStorage
-  const saveBets = useCallback(
-    (newBets: Bet[]) => {
-      setBets(newBets)
-      if (user) {
-        localStorage.setItem(`peerbet_bets_${user.id}`, JSON.stringify(newBets))
-      }
-    },
-    [user]
-  )
+  useEffect(() => {
+    fetchBets()
+  }, [fetchBets])
+
+  // No localStorage or simulation anymore
+  // rely on API
 
   const placeBet = useCallback(
     async (betData: Omit<Bet, "id" | "date" | "status">) => {
@@ -83,69 +79,27 @@ export function BetsProvider({ children }: { children: ReactNode }) {
           return { success: false, error: data?.error || "Error al guardar la apuesta" }
         }
 
-        const isMatched = data.offerStatus === "MATCHED"
+        // Refresh bets from server
+        await fetchBets();
 
-        const newBet: Bet = {
-          ...betData,
-          id: data.offerId || `b-${Date.now()}`,
-          date: new Date().toISOString().split("T")[0],
-          status: isMatched ? "matched" : "pending",
-        }
+        // Refresh balance from database
+        await refreshBalance();
 
-        if (!isMatched && betData.mode === "random") {
-          setTimeout(() => {
-            setBets((prev) => {
-              const updated = prev.map((b) =>
-                b.id === newBet.id
-                  ? {
-                      ...b,
-                      status: "matched" as const,
-                      opponent: opponents[Math.floor(Math.random() * opponents.length)],
-                    }
-                  : b
-              )
-              if (user) localStorage.setItem(`peerbet_bets_${user.id}`, JSON.stringify(updated))
-              return updated
-            })
-          }, 2000)
-        }
-
-        if (typeof data.balance === "number") {
-          updateBalance(data.balance - user.balance)
-        } else {
-          updateBalance(-betData.amount)
-        }
-
-        const updated = [...bets, newBet]
-        saveBets(updated)
         return { success: true }
       } catch (error) {
         return { success: false, error: "Error al conectar con el servidor" }
       }
     },
-    [user, bets, saveBets, updateBalance]
+    [user, fetchBets, refreshBalance]
   )
 
   const simulateResults = useCallback(() => {
-    if (!user) return
-
-    const updated = bets.map((bet) => {
-      if (bet.status === "matched") {
-        const won = Math.random() > 0.45 // ~55% win rate to keep it fun
-        if (won) {
-          const payout = bet.amount * 2 * 0.95 // 2x minus 5% commission
-          updateBalance(payout)
-        }
-        return { ...bet, status: won ? ("won" as const) : ("lost" as const) }
-      }
-      return bet
-    })
-
-    saveBets(updated)
-  }, [user, bets, saveBets, updateBalance])
+    // Removed mock simulation
+    alert("Simulación desactivada en modo producción/API real.");
+  }, [])
 
   return (
-    <BetsContext.Provider value={{ bets, placeBet, simulateResults }}>
+    <BetsContext.Provider value={{ bets, placeBet, simulateResults, fetchBets }}>
       {children}
     </BetsContext.Provider>
   )

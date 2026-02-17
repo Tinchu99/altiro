@@ -7,6 +7,136 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id                  String             @id @default(cuid())
+  email               String             @unique
+  name                String?
+  code                String             @unique
+  kycVerified         Boolean            @default(false)
+  walletId            String             @unique
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  acceptedBets        BetMatch[]         @relation("AcceptedBets")
+  createdBets         BetMatch[]         @relation("CreatedBets")
+  createdOffers       BetOffer[]         @relation("CreatedOffers")
+  transactions        Transaction[]
+  wallet              Wallet             @relation("UserWallet", fields: [walletId], references: [id], onDelete: Cascade)
+  matchHistoryAsUser1 UserMatchHistory[] @relation("User1History")
+  matchHistoryAsUser2 UserMatchHistory[] @relation("User2History")
+
+  @@index([email])
+}
+
+model Wallet {
+  id           String        @id @default(cuid())
+  balance      Decimal       @default(5000)
+  currency     String        @default("USD")
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  transactions Transaction[]
+  user         User?         @relation("UserWallet")
+}
+
+model Transaction {
+  id        String            @id @default(cuid())
+  userId    String
+  walletId  String
+  type      TransactionType
+  status    TransactionStatus @default(PENDING)
+  amount    Decimal
+  offerId   String?
+  matchId   String?
+  createdAt DateTime          @default(now())
+  match     BetMatch?         @relation(fields: [matchId], references: [id])
+  offer     BetOffer?         @relation(fields: [offerId], references: [id])
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  wallet    Wallet            @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([walletId])
+  @@index([type, status])
+  @@index([offerId])
+  @@index([matchId])
+}
+
+model SportEvent {
+  id         String      @id @default(cuid())
+  homeTeam   String
+  awayTeam   String
+  leagueName String
+  startTime  DateTime
+  status     EventStatus @default(SCHEDULED)
+  homeScore  Int?
+  awayScore  Int?
+  createdAt  DateTime    @default(now())
+  offers     BetOffer[]
+
+  @@index([status])
+  @@index([startTime])
+  @@index([leagueName])
+}
+
+model BetOffer {
+  id               String         @id @default(cuid())
+  creatorId        String
+  eventId          String?        // Made optional for direct challenges
+  targetUserCode   String?        // Code of the user being challenged
+  isDirectChallenge Boolean       @default(false)
+  message          String?        // Optional message for the challenge
+  selection        String
+  amount           Decimal
+  status           BetOfferStatus @default(OPEN)
+  createdAt        DateTime       @default(now())
+  match            BetMatch?
+  creator          User           @relation("CreatedOffers", fields: [creatorId], references: [id], onDelete: Cascade)
+  event            SportEvent?    @relation(fields: [eventId], references: [id], onDelete: Cascade) // Made optional
+  transactions     Transaction[]
+
+  @@index([creatorId])
+  @@index([eventId])
+  @@index([status])
+  @@index([targetUserCode])
+}
+
+model BetMatch {
+  id               String             @id @default(cuid())
+  offerId          String             @unique
+  creatorId        String
+  acceptorId       String
+  creatorAmount    Decimal
+  acceptorAmount   Decimal
+  acceptorSelection String?       // Selection chosen by the acceptor (e.g., AWAY, DRAW)
+  platformFeeTotal Decimal
+  winnerId         String?
+  result           BetResult?
+  status           BetMatchStatus     @default(ACTIVE)
+  settledAt        DateTime?
+  acceptor         User               @relation("AcceptedBets", fields: [acceptorId], references: [id])
+  creator          User               @relation("CreatedBets", fields: [creatorId], references: [id])
+  offer            BetOffer           @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  transactions     Transaction[]
+  matchHistory     UserMatchHistory[] @relation("MatchHistory")
+
+  @@index([creatorId])
+  @@index([acceptorId])
+  @@index([status])
+}
+
+model UserMatchHistory {
+  id         String   @id @default(cuid())
+  user1Id    String
+  user2Id    String
+  betMatchId String
+  createdAt  DateTime @default(now())
+  betMatch   BetMatch @relation("MatchHistory", fields: [betMatchId], references: [id], onDelete: Cascade)
+  user1      User     @relation("User1History", fields: [user1Id], references: [id], onDelete: Cascade)
+  user2      User     @relation("User2History", fields: [user2Id], references: [id], onDelete: Cascade)
+
+  @@index([user1Id])
+  @@index([user2Id])
+  @@index([betMatchId])
+}
+
 enum TransactionType {
   DEPOSIT
   WITHDRAWAL
@@ -44,136 +174,4 @@ enum EventStatus {
   LIVE
   FINISHED
   CANCELED
-}
-
-model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  code      String   @unique
-  kycVerified Boolean @default(false)
-  walletId  String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  wallet              Wallet             @relation("UserWallet", fields: [walletId], references: [id], onDelete: Cascade)
-  transactions        Transaction[]
-  createdOffers       BetOffer[]         @relation("CreatedOffers")
-  acceptedBets        BetMatch[]         @relation("AcceptedBets")
-  createdBets         BetMatch[]         @relation("CreatedBets")
-  matchHistoryAsUser1 UserMatchHistory[] @relation("User1History")
-  matchHistoryAsUser2 UserMatchHistory[] @relation("User2History")
-
-  @@index([email])
-}
-
-model Wallet {
-  id        String   @id @default(cuid())
-  balance   Decimal  @default(5000)
-  currency  String   @default("USD")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user         User?         @relation("UserWallet")
-  transactions Transaction[]
-}
-
-model Transaction {
-  id          String            @id @default(cuid())
-  userId      String
-  walletId    String
-  type        TransactionType
-  status      TransactionStatus @default(PENDING)
-  amount      Decimal
-  offerId     String?
-  matchId     String?
-  createdAt   DateTime          @default(now())
-
-  user   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  wallet Wallet    @relation(fields: [walletId], references: [id], onDelete: Cascade)
-  offer  BetOffer? @relation(fields: [offerId], references: [id], onDelete: SetNull)
-  match  BetMatch? @relation(fields: [matchId], references: [id], onDelete: SetNull)
-
-  @@index([userId])
-  @@index([walletId])
-  @@index([type, status])
-  @@index([offerId])
-  @@index([matchId])
-}
-
-model SportEvent {
-  id         String      @id @default(cuid())
-  homeTeam   String
-  awayTeam   String
-  leagueName String
-  startTime  DateTime
-  status     EventStatus @default(SCHEDULED)
-  homeScore  Int?
-  awayScore  Int?
-  createdAt  DateTime    @default(now())
-
-  offers BetOffer[]
-
-  @@index([status])
-  @@index([startTime])
-  @@index([leagueName])
-}
-
-model BetOffer {
-  id        String         @id @default(cuid())
-  creatorId String
-  eventId   String
-  selection String
-  amount    Decimal
-  status    BetOfferStatus @default(OPEN)
-  createdAt DateTime       @default(now())
-
-  creator      User          @relation("CreatedOffers", fields: [creatorId], references: [id], onDelete: Cascade)
-  event        SportEvent    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  match        BetMatch?
-  transactions Transaction[]
-
-  @@index([creatorId])
-  @@index([eventId])
-  @@index([status])
-}
-
-model BetMatch {
-  id               String         @id @default(cuid())
-  offerId          String         @unique
-  creatorId        String
-  acceptorId       String
-  creatorAmount    Decimal
-  acceptorAmount   Decimal
-  platformFeeTotal Decimal
-  winnerId         String?
-  result           BetResult?
-  status           BetMatchStatus @default(ACTIVE)
-  settledAt        DateTime?
-
-  offer        BetOffer           @relation(fields: [offerId], references: [id], onDelete: Cascade)
-  creator      User               @relation("CreatedBets", fields: [creatorId], references: [id])
-  acceptor     User               @relation("AcceptedBets", fields: [acceptorId], references: [id])
-  transactions Transaction[]
-  matchHistory UserMatchHistory[] @relation("MatchHistory")
-
-  @@index([creatorId])
-  @@index([acceptorId])
-  @@index([status])
-}
-
-model UserMatchHistory {
-  id         String   @id @default(cuid())
-  user1Id    String
-  user2Id    String
-  betMatchId String
-  createdAt  DateTime @default(now())
-
-  user1    User     @relation("User1History", fields: [user1Id], references: [id], onDelete: Cascade)
-  user2    User     @relation("User2History", fields: [user2Id], references: [id], onDelete: Cascade)
-  betMatch BetMatch @relation("MatchHistory", fields: [betMatchId], references: [id], onDelete: Cascade)
-
-  @@index([user1Id])
-  @@index([user2Id])
-  @@index([betMatchId])
 }

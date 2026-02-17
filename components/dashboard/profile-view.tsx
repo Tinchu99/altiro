@@ -87,7 +87,7 @@ export function ProfileView() {
             <div>
               <p className="font-medium text-[hsl(var(--foreground))]">Verificacion KYC pendiente</p>
               <p className="mt-1 text-sm text-[hsl(var(--muted-foreground))]">
-                Para desbloquear todas las funciones de PeerBet, completa la verificacion de identidad.
+                Para desbloquear todas las funciones de Al tiro, completa la verificacion de identidad.
                 Esto es requerido por las regulaciones AML de Curazao.
               </p>
               <div className="mt-4 grid gap-3 md:grid-cols-3">

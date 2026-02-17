@@ -13,7 +13,8 @@ const statusConfig = {
 }
 
 export function MyBetsView() {
-  const { bets, simulateResults } = useBets()
+  const { bets, simulateResults, fetchBets } = useBets()
+  console.log("MyBetsView rendering bets:", bets);
 
   const activeBets = bets.filter((b) => b.status === "pending" || b.status === "matched")
   const resolvedBets = bets.filter((b) => b.status === "won" || b.status === "lost")
@@ -44,15 +45,25 @@ export function MyBetsView() {
             {activeBets.length} activas, {resolvedBets.length} resueltas
           </p>
         </div>
-        {hasMatchedBets && (
+        <div className="flex gap-2">
           <Button
-            onClick={simulateResults}
-            className="bg-[hsl(var(--accent))] text-[hsl(var(--accent-foreground))] hover:bg-[hsl(38,92%,48%)]"
+            variant="outline"
+            size="sm"
+            onClick={() => fetchBets()}
+            title="Actualizar apuestas"
           >
-            <Zap className="mr-2 h-4 w-4" />
-            Simular resultados
+            <Loader2 className="h-4 w-4" />
           </Button>
-        )}
+          {hasMatchedBets && (
+            <Button
+              onClick={simulateResults}
+              className="bg-[hsl(var(--accent))] text-[hsl(var(--accent-foreground))] hover:bg-[hsl(38,92%,48%)]"
+            >
+              <Zap className="mr-2 h-4 w-4" />
+              Simular resultados
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Active bets */}

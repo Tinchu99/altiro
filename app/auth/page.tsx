@@ -114,11 +114,11 @@ export default function AuthPage() {
           <div className='mb-8 flex items-center gap-2'>
             <div className='flex h-10 w-10 items-center justify-center rounded-xl bg-[hsl(var(--primary))]'>
               <span className='font-display text-lg font-bold text-[hsl(var(--primary-foreground))]'>
-                P
+                A
               </span>
             </div>
             <span className='font-display text-2xl font-bold text-[hsl(var(--foreground))]'>
-              PeerBet
+              Al Tiro
             </span>
           </div>
 
@@ -269,7 +269,7 @@ export default function AuthPage() {
           {mode === 'register' && (
             <p className='mt-4 text-center text-xs text-[hsl(var(--muted-foreground))]'>
               Al registrarte aceptas los Terminos de Servicio y la Politica de
-              Privacidad de PeerBet. Licencia de operacion emitida en Curazao.
+              Privacidad de Al tiro. Licencia de operacion emitida en Curazao.
             </p>
           )}
         </div>

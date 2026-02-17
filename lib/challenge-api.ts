@@ -1,11 +1,12 @@
 export async function updateChallengeStatus(
   id: string,
   action: 'accept' | 'reject',
+  selection?: string,
 ) {
   const res = await fetch('/api/challenge', {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ id, action }),
+    body: JSON.stringify({ id, action, acceptorSelection: selection }),
   });
   return res.json();
 }
@@ -19,6 +20,9 @@ export type Challenge = {
   message: string;
   status: 'pending' | 'accepted' | 'rejected';
   createdAt: number;
+  eventName?: string;
+  league?: string;
+  selection?: string;
 };
 
 export async function createChallenge({

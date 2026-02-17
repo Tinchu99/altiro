@@ -5,10 +5,16 @@ import { useBets } from "@/lib/bets-context"
 import { cn } from "@/lib/utils"
 import { ArrowDownLeft, ArrowUpRight, Trophy, XCircle, Wallet } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useEffect } from "react"
 
 export function WalletView() {
-  const { user, updateBalance } = useAuth()
+  const { user, updateBalance, refreshBalance } = useAuth()
   const { bets } = useBets()
+
+  // Refresh balance from database when component mounts
+  useEffect(() => {
+    refreshBalance()
+  }, [refreshBalance])
 
   const balance = user?.balance ?? 0
   const directBets = bets.filter((b) => b.mode === "direct")

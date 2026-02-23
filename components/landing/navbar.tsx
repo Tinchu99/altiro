@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { Menu, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/lib/auth-context"
+import Image from "next/image"
 
 export function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -16,9 +17,13 @@ export function Navbar() {
       <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 md:px-6">
         {/* Logo */}
         <div className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[hsl(var(--primary))]">
-            <span className="font-display text-lg font-bold text-[hsl(var(--primary-foreground))]">A</span>
-          </div>
+          <Image
+            src="/Logo.png"
+            alt="Al Tiro Logo"
+            width={36}
+            height={36}
+            className="rounded-lg object-contain"
+          />
           <span className="font-display text-xl font-bold text-[hsl(var(--foreground))]">Al tiro</span>
         </div>
 

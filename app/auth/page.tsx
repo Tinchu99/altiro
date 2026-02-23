@@ -5,6 +5,7 @@ import React from 'react';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -114,11 +115,13 @@ export default function AuthPage() {
 
           {/* Logo */}
           <div className='mb-8 flex items-center gap-2'>
-            <div className='flex h-10 w-10 items-center justify-center rounded-xl bg-[hsl(var(--primary))]'>
-              <span className='font-display text-lg font-bold text-[hsl(var(--primary-foreground))]'>
-                A
-              </span>
-            </div>
+            <Image
+              src="/Logo.png"
+              alt="Al Tiro Logo"
+              width={40}
+              height={40}
+              className="rounded-xl object-contain"
+            />
             <span className='font-display text-2xl font-bold text-[hsl(var(--foreground))]'>
               Al Tiro
             </span>

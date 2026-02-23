@@ -1,6 +1,7 @@
 'use client';
 
 import { cn } from '@/lib/utils';
+import Image from 'next/image';
 import {
   LayoutDashboard,
   Zap,
@@ -49,22 +50,26 @@ export function SidebarNav({
       <div className='flex h-16 items-center justify-between border-b border-[hsl(var(--border))] px-4'>
         {!collapsed && (
           <div className='flex items-center gap-2'>
-            <div className='flex h-8 w-8 items-center justify-center rounded-lg bg-[hsl(var(--primary))]'>
-              <span className='font-display text-sm font-bold text-[hsl(var(--primary-foreground))]'>
-                A
-              </span>
-            </div>
+            <Image
+              src="/Logo.png"
+              alt="Al Tiro Logo"
+              width={32}
+              height={32}
+              className="rounded-lg object-contain"
+            />
             <span className='font-display text-lg font-bold text-[hsl(var(--foreground))]'>
               Al Tiro
             </span>
           </div>
         )}
         {collapsed && (
-          <div className='mx-auto flex h-8 w-8 items-center justify-center rounded-lg bg-[hsl(var(--primary))]'>
-            <span className='font-display text-sm font-bold text-[hsl(var(--primary-foreground))]'>
-              P
-            </span>
-          </div>
+          <Image
+            src="/Logo.png"
+            alt="Al Tiro Logo"
+            width={32}
+            height={32}
+            className="mx-auto rounded-lg object-contain"
+          />
         )}
       </div>
 

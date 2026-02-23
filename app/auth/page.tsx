@@ -27,6 +27,8 @@ export default function AuthPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { login, register, signInWithGoogle, googleError } = useAuth();
+  const router = useRouter();
+
   // Google sign-in handler
   async function handleGoogleSignIn() {
     const result = await signInWithGoogle();

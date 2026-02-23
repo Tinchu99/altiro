@@ -104,8 +104,8 @@ export async function POST(req: NextRequest) {
     }
 
     if (!offer) {
-       // If no match found or it's a direct challenge, create a new OPEN offer
-       offer = await tx.betOffer.create({
+      // If no match found or it's a direct challenge, create a new OPEN offer
+      offer = await tx.betOffer.create({
         data: {
           creatorId: creator.id,
           eventId,
@@ -197,7 +197,11 @@ export async function GET(req: NextRequest) {
           // Check if match is settled
           if (b.match.status === 'SETTLED') {
             // User is the creator, check if they won
-            status = b.match.winnerId === userId ? 'won' : 'lost';
+            if (b.match.result === 'PUSH') {
+              status = 'refunded';
+            } else {
+              status = b.match.winnerId === userId ? 'won' : 'lost';
+            }
           } else {
             status = 'matched';
           }
@@ -225,7 +229,11 @@ export async function GET(req: NextRequest) {
         let status = 'matched';
         if (m.status === 'SETTLED') {
           // User is the acceptor, check if they won
-          status = m.winnerId === userId ? 'won' : 'lost';
+          if (m.result === 'PUSH') {
+            status = 'refunded';
+          } else {
+            status = m.winnerId === userId ? 'won' : 'lost';
+          }
         }
 
         return {

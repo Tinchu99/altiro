@@ -22,7 +22,7 @@ export type Bet = {
   selection?: "HOME" | "AWAY" | "DRAW"
   amount: number
   mode: "random" | "direct"
-  status: "pending" | "matched" | "won" | "lost"
+  status: "pending" | "matched" | "won" | "lost" | "refunded"
   opponent?: string
   date: string
 }

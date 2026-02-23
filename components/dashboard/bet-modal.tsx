@@ -16,6 +16,7 @@ type BetModalProps = {
 
 const predictions = [
   { id: "HOME", label: "Victoria local" },
+  { id: "DRAW", label: "Empate" },
   { id: "AWAY", label: "Victoria visitante" },
 ]
 
@@ -54,7 +55,7 @@ export function BetModal({ match, onClose }: BetModalProps) {
       awayTeam: match.awayTeam,
       league: match.league,
       prediction: predLabel,
-      selection: selectedPrediction as "HOME" | "AWAY",
+      selection: selectedPrediction as "HOME" | "AWAY" | "DRAW",
       amount: amountNum,
       mode,
       opponent: mode === "direct" ? friendCode.trim() : undefined,
@@ -183,7 +184,7 @@ export function BetModal({ match, onClose }: BetModalProps) {
             {/* Prediction */}
             <div className="mb-5">
               <p className="mb-2 text-xs font-medium text-[hsl(var(--muted-foreground))]">TU PREDICCION</p>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-3 gap-2">
                 {predictions.map((pred) => (
                   <button
                     key={pred.id}

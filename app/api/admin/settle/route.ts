@@ -4,10 +4,10 @@ import { Prisma } from '@prisma/client';
 
 export async function POST(req: NextRequest) {
     try {
-        const { matchId, winnerId } = await req.json();
+        const { matchId, actualResult } = await req.json();
 
-        if (!matchId || !winnerId) {
-            return NextResponse.json({ error: 'Missing matchId or winnerId' }, { status: 400 });
+        if (!matchId || !actualResult) {
+            return NextResponse.json({ error: 'Missing matchId or actualResult' }, { status: 400 });
         }
 
         const result = await prisma.$transaction(async (tx) => {
@@ -25,11 +25,75 @@ export async function POST(req: NextRequest) {
                 throw new Error('Match is not active');
             }
 
-            if (winnerId !== match.creatorId && winnerId !== match.acceptorId) {
-                throw new Error('Winner must be one of the participants');
+            if (actualResult !== 'HOME' && actualResult !== 'AWAY' && actualResult !== 'DRAW') {
+                throw new Error('actualResult must be HOME, AWAY or DRAW');
             }
 
-            // 2. Calculate totals
+            const creatorSelection = match.offer.selection;
+            const acceptorSelection = match.acceptorSelection ||
+                (creatorSelection === 'HOME' ? 'AWAY' : creatorSelection === 'AWAY' ? 'HOME' : 'DRAW');
+
+            let winnerId = null;
+            if (creatorSelection === actualResult) {
+                winnerId = match.creatorId;
+            } else if (acceptorSelection === actualResult) {
+                winnerId = match.acceptorId;
+            }
+
+            // 2. Handle DRAW / Refund (Push)
+            if (!winnerId) {
+                const updatedMatch = await tx.betMatch.update({
+                    where: { id: matchId },
+                    data: {
+                        status: 'SETTLED',
+                        result: 'PUSH',
+                        settledAt: new Date(),
+                    }
+                });
+
+                // Refund Creator
+                const creator = await tx.user.findUnique({ where: { id: match.creatorId }, include: { wallet: true } });
+                if (creator?.wallet) {
+                    await tx.wallet.update({
+                        where: { id: creator.wallet.id },
+                        data: { balance: { increment: match.creatorAmount } }
+                    });
+                    await tx.transaction.create({
+                        data: {
+                            userId: creator.id,
+                            walletId: creator.wallet.id,
+                            type: 'BET_RELEASE',
+                            status: 'COMPLETED',
+                            amount: match.creatorAmount,
+                            matchId: match.id,
+                            offerId: match.offerId,
+                        }
+                    });
+                }
+
+                // Refund Acceptor
+                const acceptor = await tx.user.findUnique({ where: { id: match.acceptorId }, include: { wallet: true } });
+                if (acceptor?.wallet) {
+                    await tx.wallet.update({
+                        where: { id: acceptor.wallet.id },
+                        data: { balance: { increment: match.acceptorAmount } }
+                    });
+                    await tx.transaction.create({
+                        data: {
+                            userId: acceptor.id,
+                            walletId: acceptor.wallet.id,
+                            type: 'BET_RELEASE',
+                            status: 'COMPLETED',
+                            amount: match.acceptorAmount,
+                            matchId: match.id,
+                            offerId: match.offerId,
+                        }
+                    });
+                }
+                return updatedMatch;
+            }
+
+            // 3. Calculate totals for wins
             const totalPool = new Prisma.Decimal(match.creatorAmount).add(match.acceptorAmount);
             const feePercentage = new Prisma.Decimal(0.05); // 5% fee
             const platformFee = totalPool.mul(feePercentage);

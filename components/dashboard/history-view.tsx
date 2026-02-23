@@ -7,7 +7,7 @@ import { CheckCircle2, XCircle, Shuffle, UserPlus, BarChart3 } from "lucide-reac
 export function HistoryView() {
   const { bets } = useBets()
 
-  const resolvedBets = bets.filter((b) => b.status === "won" || b.status === "lost")
+  const resolvedBets = bets.filter((b) => b.status === "won" || b.status === "lost" || b.status === "refunded")
   const totalWon = resolvedBets
     .filter((h) => h.status === "won")
     .reduce((acc, h) => acc + h.amount * 2 * 0.95, 0)
@@ -17,8 +17,8 @@ export function HistoryView() {
   const winRate =
     resolvedBets.length > 0
       ? Math.round(
-          (resolvedBets.filter((h) => h.status === "won").length / resolvedBets.length) * 100
-        )
+        (resolvedBets.filter((h) => h.status === "won").length / resolvedBets.length) * 100
+      )
       : 0
 
   if (resolvedBets.length === 0) {
@@ -75,6 +75,10 @@ export function HistoryView() {
             >
               {bet.status === "won" ? (
                 <CheckCircle2 className="h-5 w-5 shrink-0 text-[hsl(var(--primary))]" />
+              ) : bet.status === "refunded" ? (
+                <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-orange-500/20 text-orange-500">
+                  <span className="text-sm font-bold">-</span>
+                </div>
               ) : (
                 <XCircle className="h-5 w-5 shrink-0 text-[hsl(var(--destructive))]" />
               )}
@@ -97,15 +101,23 @@ export function HistoryView() {
                 <p
                   className={cn(
                     "font-display text-sm font-semibold",
-                    bet.status === "won" ? "text-[hsl(var(--primary))]" : "text-[hsl(var(--destructive))]"
+                    bet.status === "won"
+                      ? "text-[hsl(var(--primary))]"
+                      : bet.status === "refunded"
+                        ? "text-orange-500"
+                        : "text-[hsl(var(--destructive))]"
                   )}
                 >
                   {bet.status === "won"
                     ? `+L. ${payout.toLocaleString()}`
-                    : `-L. ${bet.amount.toLocaleString()}`}
+                    : bet.status === "refunded"
+                      ? `Devuelto`
+                      : `-L. ${bet.amount.toLocaleString()}`}
                 </p>
                 <p className="text-xs text-[hsl(var(--muted-foreground))]">
-                  Apuesta: L. {bet.amount.toLocaleString()}
+                  {bet.status === "refunded"
+                    ? "Apuesta reembolsada"
+                    : `Apuesta: L. ${bet.amount.toLocaleString()}`}
                 </p>
               </div>
             </div>

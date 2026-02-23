@@ -36,7 +36,7 @@ export default function AdminMatchesPage() {
         fetchMatches();
     }, []);
 
-    const handleSettle = async (matchId: string, winnerId: string) => {
+    const handleSettle = async (matchId: string, actualResult: string) => {
         if (!confirm('Are you sure you want to settle this match? This action cannot be undone.')) return;
 
         setProcessing(matchId);
@@ -44,7 +44,7 @@ export default function AdminMatchesPage() {
             const res = await fetch('/api/admin/settle', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ matchId, winnerId }),
+                body: JSON.stringify({ matchId, actualResult }),
             });
 
             if (res.ok) {
@@ -85,33 +85,34 @@ export default function AdminMatchesPage() {
                             </div>
 
                             <div className="space-y-4">
-                                {/* Creator Side */}
-                                <div className="p-3 bg-muted/50 rounded flex justify-between items-center">
-                                    <div>
-                                        <p className="font-semibold text-sm">{match.creator.name || match.creator.code}</p>
-                                        <p className="text-xs text-muted-foreground">Bet: {match.selection}</p>
-                                    </div>
-                                    <button
-                                        onClick={() => handleSettle(match.id, match.creator.id)}
-                                        disabled={!!processing}
-                                        className="bg-primary text-primary-foreground text-xs px-3 py-1.5 rounded hover:bg-primary/90 disabled:opacity-50"
-                                    >
-                                        {processing === match.id ? '...' : 'Winner'}
-                                    </button>
+                                <div className="p-3 bg-muted/50 rounded text-sm text-center mb-2">
+                                    <p className="font-semibold">{match.creator.name || match.creator.code}: <span className="text-primary">{match.selection}</span></p>
+                                    <p className="font-semibold">{match.acceptor.name || match.acceptor.code}: <span className="text-primary">{match.acceptorSelection || 'OPPOSITE'}</span></p>
                                 </div>
 
-                                {/* Acceptor Side */}
-                                <div className="p-3 bg-muted/50 rounded flex justify-between items-center">
-                                    <div>
-                                        <p className="font-semibold text-sm">{match.acceptor.name || match.acceptor.code}</p>
-                                        <p className="text-xs text-muted-foreground">Bet: {match.acceptorSelection || 'OPPOSITE'}</p>
-                                    </div>
+                                <p className="text-sm font-semibold text-center mb-2">¿Cual fue el resultado real?</p>
+
+                                <div className="grid grid-cols-3 gap-2">
                                     <button
-                                        onClick={() => handleSettle(match.id, match.acceptor.id)}
+                                        onClick={() => handleSettle(match.id, 'HOME')}
                                         disabled={!!processing}
-                                        className="bg-primary text-primary-foreground text-xs px-3 py-1.5 rounded hover:bg-primary/90 disabled:opacity-50"
+                                        className="bg-primary text-primary-foreground text-xs px-2 py-2 rounded hover:bg-primary/90 disabled:opacity-50"
                                     >
-                                        {processing === match.id ? '...' : 'Winner'}
+                                        {processing === match.id ? '...' : 'Local Gano'}
+                                    </button>
+                                    <button
+                                        onClick={() => handleSettle(match.id, 'DRAW')}
+                                        disabled={!!processing}
+                                        className="bg-orange-500 text-white text-xs px-2 py-2 rounded hover:bg-orange-600 disabled:opacity-50"
+                                    >
+                                        {processing === match.id ? '...' : 'Empate'}
+                                    </button>
+                                    <button
+                                        onClick={() => handleSettle(match.id, 'AWAY')}
+                                        disabled={!!processing}
+                                        className="bg-primary text-primary-foreground text-xs px-2 py-2 rounded hover:bg-primary/90 disabled:opacity-50"
+                                    >
+                                        {processing === match.id ? '...' : 'Visitante Gano'}
                                     </button>
                                 </div>
                             </div>

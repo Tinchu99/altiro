@@ -63,29 +63,60 @@ export async function POST(req: NextRequest) {
   const feeDecimal = new Prisma.Decimal(amount * 2 * 0.05);
 
   const result = await prisma.$transaction(async (tx) => {
-    // Determine status: if direct, it stays OPEN until accepted.
-    // If random, it stays OPEN until matched (though current code implies auto-match simulation for random, 
-    // real logic would be OPEN. The original code simulated match for 'direct' too which we are changing).
-
-    // For direct challenge, we do NOT auto-match here anymore.
     const isDirect = mode === 'direct';
+    let offer = null;
+    let match = null;
 
-    const offer = await tx.betOffer.create({
-      data: {
-        creatorId: creator.id,
-        eventId,
-        selection,
-        amount: amountDecimal,
-        // For direct, it's OPEN. For random, it's OPEN (waiting for someone to take it)
-        status: 'OPEN',
-        targetUserCode: isDirect ? opponentCode : undefined,
-        isDirectChallenge: isDirect,
-      },
-    });
+    if (!isDirect) {
+      // Try to find an existing OPEN random bet for the same event, amount, but different selection
+      const existingOffer = await tx.betOffer.findFirst({
+        where: {
+          eventId,
+          isDirectChallenge: false,
+          status: 'OPEN',
+          amount: amountDecimal,
+          creatorId: { not: creator.id },
+          selection: { not: selection },
+        },
+        orderBy: { createdAt: 'asc' },
+      });
 
-    // We no longer auto-create BetMatch for direct challenges here.
-    // The opponent must accept it via the Challenge API.
-    const match = null;
+      if (existingOffer) {
+        // Match found! Updates statuses
+        offer = await tx.betOffer.update({
+          where: { id: existingOffer.id },
+          data: { status: 'MATCHED' },
+        });
+
+        match = await tx.betMatch.create({
+          data: {
+            offerId: offer.id,
+            creatorId: offer.creatorId,
+            acceptorId: creator.id,
+            creatorAmount: offer.amount,
+            acceptorAmount: offer.amount,
+            acceptorSelection: selection,
+            platformFeeTotal: new Prisma.Decimal(0), // No platform fee on creation
+            status: 'ACTIVE',
+          },
+        });
+      }
+    }
+
+    if (!offer) {
+       // If no match found or it's a direct challenge, create a new OPEN offer
+       offer = await tx.betOffer.create({
+        data: {
+          creatorId: creator.id,
+          eventId,
+          selection,
+          amount: amountDecimal,
+          status: 'OPEN',
+          targetUserCode: isDirect ? opponentCode : undefined,
+          isDirectChallenge: isDirect,
+        },
+      });
+    }
 
     const wallet = await tx.wallet.update({
       where: { id: creator.wallet!.id },
@@ -100,7 +131,7 @@ export async function POST(req: NextRequest) {
         status: 'COMPLETED',
         amount: amountDecimal,
         offerId: offer.id,
-        matchId: null,
+        matchId: match?.id || null,
       },
     });
 
@@ -109,7 +140,7 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({
     offerId: result.offer.id,
-    matchId: null,
+    matchId: result.match?.id || null,
     offerStatus: result.offer.status,
     balance: Number(result.wallet.balance),
   });

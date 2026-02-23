@@ -8,7 +8,7 @@ type BetsContextType = {
   bets: Bet[]
   placeBet: (
     bet: Omit<Bet, "id" | "date" | "status">
-  ) => Promise<{ success: boolean; error?: string }>
+  ) => Promise<{ success: boolean; error?: string; matchId?: string | null }>
   simulateResults: () => void
   fetchBets: () => Promise<void>
 }
@@ -85,7 +85,7 @@ export function BetsProvider({ children }: { children: ReactNode }) {
         // Refresh balance from database
         await refreshBalance();
 
-        return { success: true }
+        return { success: true, ...data }
       } catch (error) {
         return { success: false, error: "Error al conectar con el servidor" }
       }

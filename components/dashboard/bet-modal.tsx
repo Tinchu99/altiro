@@ -27,6 +27,7 @@ export function BetModal({ match, onClose }: BetModalProps) {
   const [amount, setAmount] = useState("")
   const [friendCode, setFriendCode] = useState("")
   const [submitted, setSubmitted] = useState(false)
+  const [matchFound, setMatchFound] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
   const [submitError, setSubmitError] = useState("")
 
@@ -66,6 +67,10 @@ export function BetModal({ match, onClose }: BetModalProps) {
       return
     }
 
+    // Set submitted to true and save response data to show correct message
+    if (result.matchId) {
+      setMatchFound(true);
+    }
     setSubmitted(true)
   }
 
@@ -96,11 +101,13 @@ export function BetModal({ match, onClose }: BetModalProps) {
               <CheckCircle2 className="h-8 w-8 text-[hsl(var(--primary))]" />
             </div>
             <h3 className="font-display text-xl font-bold text-[hsl(var(--foreground))]">
-              Apuesta registrada
+              {matchFound ? "¡Apuesta Emparejada!" : "Apuesta registrada"}
             </h3>
             <p className="text-sm text-[hsl(var(--muted-foreground))]">
               {mode === "random"
-                ? "Buscando oponente aleatorio... Te notificaremos cuando se empareje."
+                ? matchFound
+                  ? "¡Hemos encontrado un oponente! Tu apuesta ya está activa."
+                  : "Tu apuesta está en proceso. Revisa 'Mis Apuestas' para ver si ya tienes oponente."
                 : `Esperando que ${friendCode || "tu amigo"} acepte el reto.`}
             </p>
             <p className="text-xs text-[hsl(var(--accent))]">

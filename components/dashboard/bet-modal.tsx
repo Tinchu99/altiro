@@ -24,6 +24,7 @@ type Friend = {
   id: string
   name: string
   code: string
+  friendshipId: string
 }
 
 export function BetModal({ match, onClose }: BetModalProps) {
@@ -200,7 +201,7 @@ export function BetModal({ match, onClose }: BetModalProps) {
                   <div className="grid gap-2 mb-2 max-h-[150px] overflow-y-auto">
                     {friends.map((friend) => (
                       <button
-                        key={friend.id}
+                        key={friend.friendshipId}
                         type="button"
                         onClick={() => setFriendCode(friend.code)}
                         className={cn(

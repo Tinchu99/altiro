@@ -31,6 +31,7 @@ export async function GET(req: NextRequest) {
             eventName: match.offer.event
                 ? `${match.offer.event.homeTeam} vs ${match.offer.event.awayTeam}`
                 : 'Direct Challenge',
+            eventId: match.offer.eventId,
             selection: match.offer.selection,
             acceptorSelection: match.acceptorSelection
         }));

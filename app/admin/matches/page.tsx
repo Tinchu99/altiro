@@ -7,11 +7,21 @@ type Match = {
     createdAt: string;
     amount: string;
     eventName: string;
+    eventId?: string | null;
     selection: string;
     acceptorSelection: string | null;
     creator: { id: string; name: string | null; code: string };
     acceptor: { id: string; name: string | null; code: string };
 };
+
+type GroupedMatches = {
+    [key: string]: {
+        eventName: string;
+        eventId: string;
+        matches: Match[];
+        totalAmountPool: number;
+    }
+}
 
 export default function AdminMatchesPage() {
     const [matches, setMatches] = useState<Match[]>([]);
@@ -36,92 +46,152 @@ export default function AdminMatchesPage() {
         fetchMatches();
     }, []);
 
-    const handleSettle = async (matchId: string, actualResult: string) => {
-        if (!confirm('Are you sure you want to settle this match? This action cannot be undone.')) return;
+    // Agrupar las apuestas individuales (match) por evento
+    const groupMatchesByEvent = (matchesArray: Match[]): GroupedMatches => {
+        const grouped: GroupedMatches = {};
 
-        setProcessing(matchId);
+        matchesArray.forEach(match => {
+            // Si una apuesta no tiene eventId (retos directos sin evento), la agrupamos por su propio id
+            const groupId = match.eventId || match.id;
+
+            if (!grouped[groupId]) {
+                grouped[groupId] = {
+                    eventName: match.eventName,
+                    eventId: groupId,
+                    matches: [],
+                    totalAmountPool: 0
+                };
+            }
+            grouped[groupId].matches.push(match);
+
+            // Pool is creator + acceptor amount (assuming equal)
+            grouped[groupId].totalAmountPool += (Number(match.amount) * 2);
+        });
+
+        return grouped;
+    };
+
+    const handleSettle = async (eventIdOrMatchId: string, actualResult: string, isEventId: boolean) => {
+        if (!confirm('Are you sure you want to settle this? This action cannot be undone and will distribute funds to all winners.')) return;
+
+        setProcessing(eventIdOrMatchId);
         try {
             const res = await fetch('/api/admin/settle', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ matchId, actualResult }),
+                body: JSON.stringify({
+                    eventId: isEventId ? eventIdOrMatchId : undefined,
+                    matchId: !isEventId ? eventIdOrMatchId : undefined,
+                    actualResult
+                }),
             });
 
             if (res.ok) {
-                alert('Match settled successfully!');
+                const result = await res.json();
+                alert(`Successfully settled ${result.settledCount} match(es)!`);
                 fetchMatches(); // Refresh list
             } else {
                 const err = await res.json();
                 alert(`Error: ${err.error}`);
             }
         } catch (error) {
-            console.error('Error settling match:', error);
-            alert('Failed to settle match');
+            console.error('Error settling matches:', error);
+            alert('Failed to settle match(es)');
         } finally {
             setProcessing(null);
         }
     };
 
-    if (loading) return <div>Loading matches...</div>;
+    if (loading) return <div>Loading active matches...</div>;
+
+    const groupedData = groupMatchesByEvent(matches);
+    const eventGroups = Object.values(groupedData);
 
     return (
         <div>
-            <h1 className="text-2xl font-bold mb-6 text-foreground">Active Matches</h1>
+            <h1 className="text-2xl font-bold mb-6 text-foreground">Active Matches (Grouped by Event)</h1>
 
-            {matches.length === 0 ? (
+            {eventGroups.length === 0 ? (
                 <p className="text-muted-foreground">No active matches found.</p>
             ) : (
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {matches.map((match) => (
-                        <div key={match.id} className="bg-card border rounded-lg p-4 shadow-sm">
-                            <div className="flex justify-between items-start mb-4">
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
+                    {eventGroups.map((group) => {
+                        const isEvent = group.matches.length > 0 && group.matches[0].eventId != null;
+
+                        return (
+                            <div key={group.eventId} className="bg-card border rounded-lg p-4 shadow-sm flex flex-col">
+                                <div className="flex justify-between items-start mb-4">
+                                    <div>
+                                        <h3 className="font-bold text-foreground">{group.eventName}</h3>
+                                        <p className="text-sm text-muted-foreground">
+                                            Total Stake Pool: <span className="text-primary font-semibold">${group.totalAmountPool}</span>
+                                        </p>
+                                        <p className="text-xs text-muted-foreground mt-1">
+                                            Active Bets: {group.matches.length}
+                                        </p>
+                                    </div>
+                                    <span className="bg-green-500/10 text-green-500 text-xs px-2 py-1 rounded">
+                                        Active
+                                    </span>
+                                </div>
+
+                                <div className="flex-1 space-y-2 mb-4 overflow-y-auto max-h-48 border border-muted p-2 rounded-md">
+                                    {group.matches.map(match => (
+                                        <div key={match.id} className="p-2 bg-muted/30 rounded text-xs">
+                                            <div className="flex justify-between items-center whitespace-nowrap overflow-hidden text-ellipsis">
+                                                <span className="font-semibold text-foreground truncate w-1/3">
+                                                    {match.creator.name || match.creator.code}
+                                                </span>
+                                                <span className="text-primary font-bold px-1 text-[10px] w-1/6 text-center">
+                                                    VS
+                                                </span>
+                                                <span className="font-semibold text-foreground text-right truncate w-1/3">
+                                                    {match.acceptor.name || match.acceptor.code}
+                                                </span>
+                                            </div>
+                                            <div className="flex justify-between items-center mt-1 text-[10px] text-muted-foreground">
+                                                <span>{match.selection}</span>
+                                                <span>(${match.amount})</span>
+                                                <span>{match.acceptorSelection || 'OPPOSITE'}</span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+
                                 <div>
-                                    <h3 className="font-bold text-foreground">{match.eventName}</h3>
-                                    <p className="text-sm text-muted-foreground">Amount: ${match.amount}</p>
+                                    <p className="text-sm font-semibold text-center mb-3">¿Cuál fue el resultado real del partido?</p>
+
+                                    <div className="grid grid-cols-3 gap-2">
+                                        <button
+                                            onClick={() => handleSettle(group.eventId, 'HOME', isEvent)}
+                                            disabled={!!processing}
+                                            className="bg-primary text-primary-foreground text-xs px-2 py-2 rounded hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                                        >
+                                            {processing === group.eventId ? '...' : 'Local Gano'}
+                                        </button>
+                                        <button
+                                            onClick={() => handleSettle(group.eventId, 'DRAW', isEvent)}
+                                            disabled={!!processing}
+                                            className="bg-orange-500 text-white text-xs px-2 py-2 rounded hover:bg-orange-600 disabled:opacity-50 transition-colors"
+                                        >
+                                            {processing === group.eventId ? '...' : 'Empate'}
+                                        </button>
+                                        <button
+                                            onClick={() => handleSettle(group.eventId, 'AWAY', isEvent)}
+                                            disabled={!!processing}
+                                            className="bg-primary text-primary-foreground text-xs px-2 py-2 rounded hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                                        >
+                                            {processing === group.eventId ? '...' : 'Visitante Gano'}
+                                        </button>
+                                    </div>
                                 </div>
-                                <span className="bg-green-500/10 text-green-500 text-xs px-2 py-1 rounded">
-                                    Active
-                                </span>
-                            </div>
 
-                            <div className="space-y-4">
-                                <div className="p-3 bg-muted/50 rounded text-sm text-center mb-2">
-                                    <p className="font-semibold">{match.creator.name || match.creator.code}: <span className="text-primary">{match.selection}</span></p>
-                                    <p className="font-semibold">{match.acceptor.name || match.acceptor.code}: <span className="text-primary">{match.acceptorSelection || 'OPPOSITE'}</span></p>
-                                </div>
-
-                                <p className="text-sm font-semibold text-center mb-2">¿Cual fue el resultado real?</p>
-
-                                <div className="grid grid-cols-3 gap-2">
-                                    <button
-                                        onClick={() => handleSettle(match.id, 'HOME')}
-                                        disabled={!!processing}
-                                        className="bg-primary text-primary-foreground text-xs px-2 py-2 rounded hover:bg-primary/90 disabled:opacity-50"
-                                    >
-                                        {processing === match.id ? '...' : 'Local Gano'}
-                                    </button>
-                                    <button
-                                        onClick={() => handleSettle(match.id, 'DRAW')}
-                                        disabled={!!processing}
-                                        className="bg-orange-500 text-white text-xs px-2 py-2 rounded hover:bg-orange-600 disabled:opacity-50"
-                                    >
-                                        {processing === match.id ? '...' : 'Empate'}
-                                    </button>
-                                    <button
-                                        onClick={() => handleSettle(match.id, 'AWAY')}
-                                        disabled={!!processing}
-                                        className="bg-primary text-primary-foreground text-xs px-2 py-2 rounded hover:bg-primary/90 disabled:opacity-50"
-                                    >
-                                        {processing === match.id ? '...' : 'Visitante Gano'}
-                                    </button>
+                                <div className="mt-4 text-xs text-center text-muted-foreground">
+                                    Settling this event will release funds to all {group.matches.length} matches simultaneously.
                                 </div>
                             </div>
-
-                            <div className="mt-4 text-xs text-center text-muted-foreground">
-                                Settling will release funds to the winner immediately.
-                            </div>
-                        </div>
-                    ))}
+                        )
+                    })}
                 </div>
             )}
         </div>

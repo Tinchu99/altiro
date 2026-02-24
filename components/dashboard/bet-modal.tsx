@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import type { Match } from "@/lib/mock-data"
 import { useAuth } from "@/lib/auth-context"
 import { useBets } from "@/lib/bets-context"
@@ -20,6 +20,12 @@ const predictions = [
   { id: "AWAY", label: "Victoria visitante" },
 ]
 
+type Friend = {
+  id: string
+  name: string
+  code: string
+}
+
 export function BetModal({ match, onClose }: BetModalProps) {
   const { user } = useAuth()
   const { placeBet } = useBets()
@@ -32,6 +38,20 @@ export function BetModal({ match, onClose }: BetModalProps) {
   const [isProcessing, setIsProcessing] = useState(false)
   const [submitError, setSubmitError] = useState("")
 
+  const [friends, setFriends] = useState<Friend[]>([])
+  const [friendsLoading, setFriendsLoading] = useState(false)
+
+  useEffect(() => {
+    if (user && mode === "direct") {
+      setFriendsLoading(true)
+      fetch(`/api/friends?userId=${user.id}`)
+        .then((res) => res.json())
+        .then((data) => setFriends(data.friends || []))
+        .catch((err) => console.error("Error loading friends:", err))
+        .finally(() => setFriendsLoading(false))
+    }
+  }, [user, mode])
+
   const amountNum = Number.parseFloat(amount) || 0
   const commission = amountNum * 0.05
   const netAmount = amountNum - commission
@@ -41,7 +61,7 @@ export function BetModal({ match, onClose }: BetModalProps) {
   async function handleSubmit() {
     if (!selectedPrediction || amountNum <= 0 || insufficientFunds || !user) return
     if (mode === "direct" && !friendCode.trim()) {
-      setSubmitError("Ingresa el codigo del amigo")
+      setSubmitError("Selecciona un amigo para el reto")
       return
     }
     setSubmitError("")
@@ -164,16 +184,40 @@ export function BetModal({ match, onClose }: BetModalProps) {
               </div>
             </div>
 
-            {/* Direct mode: friend code */}
+            {/* Direct mode: friend code (now selection) */}
             {mode === "direct" && (
               <div className="mb-5">
-                <p className="mb-2 text-xs font-medium text-[hsl(var(--muted-foreground))]">CODIGO DE AMIGO</p>
-                <Input
-                  placeholder="Ingresa el codigo de usuario"
-                  value={friendCode}
-                  onChange={(e) => setFriendCode(e.target.value)}
-                  className="border-[hsl(var(--border))] bg-[hsl(var(--background))] text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))]"
-                />
+                <p className="mb-2 text-xs font-medium text-[hsl(var(--muted-foreground))]">SELECCIONA UN AMIGO</p>
+                {friendsLoading ? (
+                  <div className="flex justify-center p-4">
+                    <Loader2 className="h-5 w-5 animate-spin text-[hsl(var(--primary))]" />
+                  </div>
+                ) : friends.length === 0 ? (
+                  <p className="text-sm text-[hsl(var(--muted-foreground))] mb-2 rounded border border-dashed border-border p-3 text-center">
+                    No has agregado a ningún amigo todavía. Añade amigos desde el menú Lateral en la sección Amigos para poder retarlos.
+                  </p>
+                ) : (
+                  <div className="grid gap-2 mb-2 max-h-[150px] overflow-y-auto">
+                    {friends.map((friend) => (
+                      <button
+                        key={friend.id}
+                        type="button"
+                        onClick={() => setFriendCode(friend.code)}
+                        className={cn(
+                          "w-full rounded-lg border p-3 text-left transition-all flex justify-between items-center",
+                          friendCode === friend.code
+                            ? "border-[hsl(var(--primary))] bg-[hsl(var(--primary))]/10"
+                            : "border-[hsl(var(--border))] hover:border-[hsl(var(--primary))]/30 bg-[hsl(var(--card))]"
+                        )}
+                      >
+                        <span className={cn("font-medium text-sm", friendCode === friend.code ? "text-[hsl(var(--primary))]" : "text-[hsl(var(--foreground))]")}>
+                          {friend.name || friend.code}
+                        </span>
+                        <span className="text-xs font-mono text-[hsl(var(--muted-foreground))]">{friend.code}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
                 <div className="mt-2 flex items-center gap-1.5 text-[hsl(var(--accent))]">
                   <AlertTriangle className="h-3.5 w-3.5" />
                   <span className="text-xs">Limite mensual: L. 10,000 en retos directos</span>

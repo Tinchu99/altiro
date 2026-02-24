@@ -12,6 +12,7 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
+  Users,
 } from 'lucide-react';
 
 type SidebarNavProps = {
@@ -27,6 +28,7 @@ const navItems = [
   { id: 'my-bets', label: 'Mis apuestas', icon: Zap },
   { id: 'history', label: 'Historial', icon: History },
   { id: 'wallet', label: 'Billetera', icon: Wallet },
+  { id: 'friends', label: 'Amigos', icon: Users },
   { id: 'challenge', label: 'Reto directo', icon: Shield },
   { id: 'risk', label: 'Mi nivel de riesgo', icon: Shield },
   { id: 'profile', label: 'Perfil', icon: User },

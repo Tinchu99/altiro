@@ -24,7 +24,24 @@ model User {
   matchHistoryAsUser1 UserMatchHistory[] @relation("User1History")
   matchHistoryAsUser2 UserMatchHistory[] @relation("User2History")
 
+  friends             Friendship[]       @relation("UserFriends")
+  friendOf            Friendship[]       @relation("FriendOfUser")
+
   @@index([email])
+}
+
+model Friendship {
+  id        String   @id @default(cuid())
+  userId    String
+  friendId  String
+  createdAt DateTime @default(now())
+  
+  user      User     @relation("UserFriends", fields: [userId], references: [id], onDelete: Cascade)
+  friend    User     @relation("FriendOfUser", fields: [friendId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, friendId])
+  @@index([userId])
+  @@index([friendId])
 }
 
 model Wallet {

@@ -9,6 +9,7 @@ import { MatchesView } from '@/components/dashboard/matches-view';
 import { MyBetsView } from '@/components/dashboard/my-bets-view';
 import { HistoryView } from '@/components/dashboard/history-view';
 import { WalletView } from '@/components/dashboard/wallet-view';
+import { FriendsView } from '@/components/dashboard/friends-view';
 import { RiskView } from '@/components/dashboard/risk-view';
 import { ProfileView } from '@/components/dashboard/profile-view';
 import { Bell, Search, Menu, X, Loader2 } from 'lucide-react';
@@ -18,6 +19,7 @@ const viewTitles: Record<string, string> = {
   'my-bets': 'Mis apuestas',
   history: 'Historial',
   wallet: 'Billetera',
+  friends: 'Mis Amigos',
   risk: 'Mi nivel de riesgo',
   profile: 'Perfil',
   challenge: 'Reto directo',
@@ -173,6 +175,7 @@ export default function DashboardPage() {
             {currentView === 'my-bets' && <MyBetsView />}
             {currentView === 'history' && <HistoryView />}
             {currentView === 'wallet' && <WalletView />}
+            {currentView === 'friends' && <FriendsView />}
             {currentView === 'challenge' && <DirectChallenge />}
             {currentView === 'risk' && <RiskView />}
             {currentView === 'profile' && <ProfileView />}
